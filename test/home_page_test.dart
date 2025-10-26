@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,8 +19,9 @@ void main() {
       setupFirebaseAuthMocks();
     });
 
-    testWidgets('displays login button when user is not logged in',
-        (WidgetTester tester) async {
+    testWidgets('displays login button when user is not logged in', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       await tester.pumpWidget(
         ProviderScope(
@@ -42,8 +42,9 @@ void main() {
       expect(find.text('Discussion'), findsNothing);
     });
 
-    testWidgets('displays logout button when user is logged in',
-        (WidgetTester tester) async {
+    testWidgets('displays logout button when user is logged in', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUser = MockUser(
         uid: 'test-uid',
@@ -63,6 +64,9 @@ void main() {
         ),
       );
 
+      // Pump frames to allow provider states to settle
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       // Assert
@@ -70,8 +74,9 @@ void main() {
       expect(find.text('Profile'), findsOneWidget);
     });
 
-    testWidgets('displays Discussion section when user is logged in',
-        (WidgetTester tester) async {
+    testWidgets('displays Discussion section when user is logged in', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUser = MockUser(
         uid: 'test-uid',
@@ -91,14 +96,24 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      // Pump frames to allow provider states to settle
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Scroll to make Discussion header visible
+      final listView = find.byType(ListView);
+      if (listView.evaluate().isNotEmpty) {
+        await tester.drag(listView, const Offset(0, -200));
+        await tester.pumpAndSettle();
+      }
 
       // Assert
       expect(find.text('Discussion'), findsOneWidget);
     });
 
-    testWidgets('displays guestbook messages when logged in',
-        (WidgetTester tester) async {
+    testWidgets('displays guestbook messages when logged in', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUser = MockUser(
         uid: 'test-uid',
@@ -123,15 +138,25 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      // Pump frames to allow provider states to settle
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Scroll to make messages visible if needed
+      final listView = find.byType(ListView);
+      if (listView.evaluate().isNotEmpty) {
+        await tester.drag(listView, const Offset(0, -300));
+        await tester.pumpAndSettle();
+      }
 
       // Assert
       expect(find.text('Alice: Hello World'), findsOneWidget);
       expect(find.text('Bob: Great app!'), findsOneWidget);
     });
 
-    testWidgets('shows loading indicator while messages are loading',
-        (WidgetTester tester) async {
+    testWidgets('shows loading indicator while messages are loading', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUser = MockUser(
         uid: 'test-uid',
@@ -159,8 +184,9 @@ void main() {
       expect(find.byType(HomePage), findsOneWidget);
     });
 
-    testWidgets('displays error message when messages fail to load',
-        (WidgetTester tester) async {
+    testWidgets('displays error message when messages fail to load', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUser = MockUser(
         uid: 'test-uid',
@@ -180,14 +206,24 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      // Pump frames to allow error state to propagate
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Scroll to make error message visible if needed
+      final listView = find.byType(ListView);
+      if (listView.evaluate().isNotEmpty) {
+        await tester.drag(listView, const Offset(0, -300));
+        await tester.pumpAndSettle();
+      }
 
       // Assert
       expect(find.textContaining('Error:'), findsOneWidget);
     });
 
-    testWidgets('displays event information correctly',
-        (WidgetTester tester) async {
+    testWidgets('displays event information correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       await tester.pumpWidget(
         ProviderScope(
@@ -203,21 +239,31 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Assert
+      // Assert - check app bar
       expect(find.text('Firebase Meetup'), findsOneWidget);
+
+      // Scroll down to see event details
+      final listView = find.byType(ListView);
+      await tester.drag(listView, const Offset(0, -100));
+      await tester.pumpAndSettle();
+
       expect(find.text('October 30'), findsOneWidget);
       expect(find.text('San Francisco'), findsOneWidget);
-      expect(
-        find.text("What we'll be doing"),
-        findsOneWidget,
-      );
+
+      // Scroll more to see description
+      await tester.drag(listView, const Offset(0, -100));
+      await tester.pumpAndSettle();
+
+      expect(find.text("What we'll be doing"), findsOneWidget);
       expect(
         find.text('Join us for a day full of Firebase Workshops and Pizza!'),
         findsOneWidget,
       );
     });
 
-    testWidgets('displays multiple messages correctly', (WidgetTester tester) async {
+    testWidgets('displays multiple messages correctly', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUser = MockUser(
         uid: 'test-uid',
@@ -227,10 +273,7 @@ void main() {
 
       final messages = List.generate(
         5,
-        (i) => GuestBookMessage(
-          name: 'User $i',
-          message: 'Message $i',
-        ),
+        (i) => GuestBookMessage(name: 'User $i', message: 'Message $i'),
       );
 
       await tester.pumpWidget(
@@ -245,6 +288,13 @@ void main() {
         ),
       );
 
+      // Pump frames to allow provider states to settle
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Scroll to make messages visible
+      final listView = find.byType(ListView);
+      await tester.drag(listView, const Offset(0, -400));
       await tester.pumpAndSettle();
 
       // Assert - verify multiple messages are displayed
