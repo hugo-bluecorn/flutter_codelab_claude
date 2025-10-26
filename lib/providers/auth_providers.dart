@@ -10,11 +10,14 @@ import 'firebase_providers.dart';
 
 /// Provider that streams the current authentication state
 /// Returns User? (null if not logged in)
-final authStateProvider = StreamProvider<User?>((ref) {
-  // Ensure Firebase is initialized first
-  ref.watch(firebaseInitProvider);
+final authStateProvider = StreamProvider<User?>((ref) async* {
+  // Wait for Firebase to initialize before streaming auth changes
+  await ref.watch(firebaseInitProvider.future);
 
-  return FirebaseAuth.instance.userChanges();
+  // Now yield auth state changes
+  await for (final user in FirebaseAuth.instance.userChanges()) {
+    yield user;
+  }
 });
 
 /// Derived provider that returns a simple boolean for logged-in state

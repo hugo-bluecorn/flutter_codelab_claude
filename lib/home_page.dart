@@ -18,6 +18,10 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loggedIn = ref.watch(loggedInProvider);
+    final messagesAsync = ref.watch(guestbookMessagesProvider);
+    final guestbookService = ref.watch(guestbookServiceProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Firebase Meetup')),
       body: ListView(
@@ -27,7 +31,7 @@ class HomePage extends ConsumerWidget {
           const IconAndDetail(Icons.calendar_today, 'October 30'),
           const IconAndDetail(Icons.location_city, 'San Francisco'),
           AuthFunc(
-            loggedIn: ref.watch(loggedInProvider),
+            loggedIn: loggedIn,
             signOut: () {
               FirebaseAuth.instance.signOut();
             },
@@ -43,30 +47,22 @@ class HomePage extends ConsumerWidget {
           const Paragraph(
             'Join us for a day full of Firebase Workshops and Pizza!',
           ),
-          Consumer(
-            builder: (context, ref, _) {
-              final loggedIn = ref.watch(loggedInProvider);
-              final messagesAsync = ref.watch(guestbookMessagesProvider);
-              final guestbookService = ref.watch(guestbookServiceProvider);
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (loggedIn) ...[
-                    const Header('Discussion'),
-                    messagesAsync.when(
-                      data: (messages) => GuestBook(
-                        addMessage: (message) =>
-                            guestbookService.addMessageToGuestBook(message),
-                        messages: messages,
-                      ),
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) => Text('Error: $error'),
-                    ),
-                  ],
-                ],
-              );
-            },
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (loggedIn) ...[
+                const Header('Discussion'),
+                messagesAsync.when(
+                  data: (messages) => GuestBook(
+                    addMessage: (message) =>
+                        guestbookService.addMessageToGuestBook(message),
+                    messages: messages,
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Text('Error: $error'),
+                ),
+              ],
+            ],
           ),
         ],
       ),
