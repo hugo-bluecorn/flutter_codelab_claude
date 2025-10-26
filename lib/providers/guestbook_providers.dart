@@ -23,11 +23,24 @@ final guestbookMessagesProvider =
         return Stream.value(<GuestBookMessage>[]);
       }
 
-      // Logged in - subscribe to Firestore
+      // Logged in - subscribe to Firestore with timeout handling
       return FirebaseFirestore.instance
           .collection('guestbook')
           .orderBy('timestamp', descending: true)
           .snapshots()
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: (sink) {
+              // On timeout, emit an error
+              sink.addError(
+                Exception(
+                  'Failed to load messages: connection timed out. '
+                  'Please check your internet connection.',
+                ),
+              );
+              sink.close();
+            },
+          )
           .map((snapshot) {
         return snapshot.docs.map((document) {
           final data = document.data();
@@ -36,6 +49,9 @@ final guestbookMessagesProvider =
             message: data['text'] as String,
           );
         }).toList();
+      }).handleError((error) {
+        // Handle any errors by returning empty list
+        return <GuestBookMessage>[];
       });
     },
     loading: () => Stream.value(<GuestBookMessage>[]),
@@ -52,18 +68,33 @@ final guestbookServiceProvider = Provider<GuestbookService>((ref) {
 class GuestbookService {
   /// Adds a message to the guestbook
   /// Throws an exception if user is not logged in
-  Future<DocumentReference> addMessageToGuestBook(String message) {
+  /// Includes 15-second timeout for write operation
+  Future<DocumentReference> addMessageToGuestBook(String message) async {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
       throw Exception('Must be logged in');
     }
 
-    return FirebaseFirestore.instance.collection('guestbook').add(<String, dynamic>{
-      'text': message,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'name': currentUser.displayName,
-      'userId': currentUser.uid,
-    });
+    try {
+      return await FirebaseFirestore.instance
+          .collection('guestbook')
+          .add(<String, dynamic>{
+        'text': message,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'name': currentUser.displayName,
+        'userId': currentUser.uid,
+      }).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception(
+            'Failed to add message: operation timed out. '
+            'Please check your connection and try again.',
+          );
+        },
+      );
+    } catch (e) {
+      throw Exception('Failed to add message: $e');
+    }
   }
 }
