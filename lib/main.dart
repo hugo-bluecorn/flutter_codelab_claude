@@ -3,19 +3,17 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
-import 'app_state.dart';
 import 'router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => ApplicationState(),
-      builder: ((context, child) => const App()),
+    const ProviderScope(
+      child: App(),
     ),
   );
 }
